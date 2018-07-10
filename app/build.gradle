@@ -1,0 +1,92 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.3"
+    defaultConfig {
+        applicationId "com.linlif.encrypt"
+        minSdkVersion 19
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            //signingConfig signingConfigs.release
+
+        }
+    }
+
+}
+
+
+
+task makeCryptJar << {
+
+    project(':Encryt').tasks.compileJava.execute();
+    project(':Encryt').tasks.processResources.execute();
+    project(':Encryt').tasks.classes.execute();
+    project(':Encryt').tasks.fatJar.execute();
+}
+
+def dex_app_Dir = project.rootDir.absolutePath + '/app'
+def pre_build_module_name = "Encryt"
+def pre_build_lib_Dir = project.rootDir.absolutePath + File.separator + pre_build_module_name;
+
+task encrypt << {
+
+    makeCryptJar.execute();
+
+
+
+    javaexec {
+        classpath += files(pre_build_lib_Dir + "/build/libs/" + pre_build_module_name + ".jar")
+        main = "com.encryt.code.CryptOprator"
+
+        args = [
+                "type:en",
+                "dirs:" +  dex_app_Dir
+
+        ]
+    }
+    clean.execute();
+}
+
+task decrypt << {
+    javaexec {
+        classpath += files(pre_build_lib_Dir + "/build/libs/" + pre_build_module_name + ".jar")
+        main = "com.encryt.code.CryptOprator"
+
+        args = [
+                "type:de",
+                "dirs:" + dex_app_Dir
+
+        ]
+    }
+}
+
+
+
+assemble.dependsOn {
+    encrypt.execute();
+}
+
+assemble.doLast {
+    decrypt.execute();
+}
+
+
+dependencies {
+    compile project(':Encryt')
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile 'com.android.support:appcompat-v7:26.0.0-alpha1'
+    testCompile 'junit:junit:4.12'
+}
